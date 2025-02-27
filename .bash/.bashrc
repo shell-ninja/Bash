@@ -1,5 +1,5 @@
-# ~/.bash/.bashrc
-
+#!/usr/bin/env bash
+iatest=$(expr index "$-" i)
 #==============================================================================
 
 # ███████╗██╗  ██╗███████╗██╗         ███╗   ██╗██╗███╗   ██╗     ██╗ █████╗ 
@@ -10,6 +10,22 @@
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝
                                                                             
 #==============================================================================
+
+
+# ================================= fastfetch ================================= #
+if command -v fastfetch &> /dev/null; then
+    # Only run fastfetch if we're in an interactive shell
+    if [[ $- == *i* ]]; then
+        if [[ -d "$HOME/.local/share/fastfetch" ]]; then
+            ffconfig=hypr
+            fastfetch --config "$ffconfig"
+        else
+            fastfetch
+        fi
+    fi
+fi
+
+
 
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
@@ -27,7 +43,7 @@ export PROMPT_COMMAND='precmd; preexec'
 PS1='$(if [[ "$PWD" = "$HOME" ]]; then echo "\e[1;36m\e[1;0m"; elif [[ "$PWD" = "/" ]]; then echo " \e[1;0m"; elif [[ ! "$PWD" == "$HOME" ]]; then echo "\n\w"; fi)\n\e[1;32m❯\e[1;0m '
 
 # set prompt starship
-export STARSHIP_CONFIG=~/.bash/starship/starship.toml
+# export STARSHIP_CONFIG=~/.bash/starship/starship-simple.toml
 # eval "$(starship init bash)"
 
 
@@ -51,6 +67,12 @@ show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head
 
 export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+
+
+# =============== Load .bashrc.d Scripts Efficiently =============== #
+if [ -d ~/.bashrc.d ]; then
+    find ~/.bashrc.d -type f -name '*.sh' -exec . {} \;
+fi
 
 
 # ================================= fzf ================================= #
@@ -94,11 +116,6 @@ if command -v fzf &> /dev/null; then
   _fzf_preview() {
     eza --color=always --icons=always "$1"
   }
-
-  # For zoxide integration with FZF (if zoxide is installed)
-  if command -v zoxide &> /dev/null; then
-    alias zi='zoxide query -i | xargs -r eza --color=always --icons=always'
-  fi
 fi
 
 
@@ -108,21 +125,43 @@ shopt -s autocd
 unset rc
 
 
-# ================================= fastfetch ================================= #
-fastfetch
-
 
 # ================================= add functionalities ================================= #
-eval "$(fzf --bash)" # fzf
-eval "$(thefuck --alias)" # thefu*k
-eval "$(thefuck --alias hell)" # thefu*k
-eval "$(zoxide init bash)" # zoxide
+# Only load `thefuck` and `zoxide` when needed
+_thefuck_init() { eval "$(thefuck --alias)"; unset -f _thefuck_init; }
 
+alias fuck='_thefuck_init && fuck'
+alias hell='_thefuck_init && hell'
+
+# For zoxide integration with FZF (if zoxide is installed)
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init bash)"
+    alias zi='zoxide query -i | xargs -r eza --color=always --icons=always'
+    _ZO_DOCTOR=0
+fi
 
 # ================================= source functions, aliases and blers ================================= #
 source ~/.bash/functions.sh
 source ~/.bash/alias.sh
 source ~/.bash/.blerc
+
+
+
+# ================================= Expand the history size ================================= #
+export HISTFILESIZE=10000
+export HISTSIZE=500
+export HISTTIMEFORMAT="%F %T" # add timestamp to history
+
+# Don't put duplicate lines in the history and do not add lines that start with a space
+export HISTCONTROL=erasedups:ignoredups:ignorespace
+
+# Check the window size after each command and, if necessary, update the values of LINES and COLUMNS
+shopt -s checkwinsize
+
+# Causes bash to append to history instead of overwriting it so if you start a new terminal, you have old session history
+shopt -s histappend
+PROMPT_COMMAND='history -a'
+alias hist="history | grep"
 
 
 # ================================= transient prompt and right prompt ================================= #
@@ -144,4 +183,8 @@ bind "set vi-ins-mode-string "
 
 
 # ================================= ble-attach ================================= #
-[[ ${BLE_VERSION-} ]] && ble-attach
+if [[ ${BLE_VERSION-} ]]; then
+    ble-attach
+else
+    (source ~/.local/share/blesh/ble.sh --attach=none &)  # Load in background
+fi

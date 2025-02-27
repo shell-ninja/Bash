@@ -27,6 +27,26 @@ fn_copy_paste() {
     done
 }
 
+# Copy file with a progress bar
+cpb() {
+    set -e
+    strace -q -ewrite cp -- "${1}" "${2}" 2>&1 |
+    awk '{
+        count += $NF
+        if (count % 10 == 0) {
+            percent = count / total_size * 100
+            printf "%3d%% [", percent
+            for (i=0;i<=percent;i++)
+                printf "="
+            printf ">"
+            for (i=percent;i<100;i++)
+                printf " "
+            printf "]\r"
+        }
+    }
+    END { print "" }' total_size="$(stat -c '%s' "${1}")" count=0
+}
+
 # remove files and directories
 fn_removal() {
     for item in "$@"; do
@@ -226,7 +246,7 @@ git_info() {
 }
 
 # fn to push git commits easily
-gpush() {
+push() {
 
     # Push function
     __push() {
@@ -359,12 +379,37 @@ current_time() {
     echo -e "\e[90m $(date +%I:%M\ %p)\e[0m"
 }
 
-random_bars() {
-	columns=$(tput cols)
-	chars=(▁ ▂ ▃ ▄ ▅ ▆ ▇ █)
-	for ((i = 1; i <= $columns; i++))
-	do
-		echo -n "${chars[RANDOM%${#chars} + 1]}"
-	done
-	echo
+ffstyle() {
+    preferredDir="$HOME/.local/share/fastfetch/presets"
+
+    if [[ ! -d "$preferredDir" ]]; then
+        exit 0
+    fi
+
+    presets=()
+
+    for preset in "$preferredDir"/*.jsonc; do
+        [[ -f "$preset" ]] || continue  # Skip if no matching file
+        presets+=("${preset##*/}")  # Extract filename
+    done
+
+    # Remove .jsonc extension from all entries
+    presets=("${presets[@]%.jsonc}")
+
+    echo "-> Choose Fastfetch style you want"
+
+    local i=1
+    for prst in "${presets[@]}"; do
+        echo -e "$i. $prst"
+        ((i++))
+    done
+
+    read -p "Select: " stl
+
+    if [[ "$stl" -gt 0 && "$stl" -le "${#presets[@]}" ]]; then
+        __selected="${presets[$((stl - 1))]}"
+        echo "Setting $__selected as fastfetch style..."
+        sed -i "s|ffconfig=.*$|ffconfig=$__selected|g" "$HOME/.bash/.bashrc"
+    fi
+    
 }

@@ -39,9 +39,9 @@ alias clar='clear'
 alias c='clear'
 alias q='exit'
 
-alias rm='fn_removal' #remove both file & direvtory ( one file / directory at a time )
+alias rmv='fn_removal' #remove both file & direvtory ( one file / directory at a time )
 alias srm='sudo rm -rf' # remove in a sude command
-alias cp='fn_copy_paste'
+alias cpy='fn_copy_paste'
 
 # disk spaces and RAM usage
 alias du='du -sh'
@@ -75,7 +75,7 @@ alias clone='git clone'
 alias cloned='git clone --depth=1'
 alias branch='git branch -M main'
 alias commit='git commit -m'
-alias push='git push'
+# alias push='git push'
 alias pushm='git push -u origin main'
 alias pusho='git push origin' # and add your branch name 
 alias pull='git pull'

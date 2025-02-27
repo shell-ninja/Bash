@@ -1,6 +1,6 @@
 format = """
-[╭─](bold #434C5E) $username\
-$hostname\
+$os\
+$username\
 $directory\
 $fill\
 $git_branch\
@@ -10,8 +10,7 @@ $python\
 $lua\
 $nodejs\
 $cmd_duration\
-$line_break\
-[╰──](bold #434C5E)\
+$linebreak
 $character"""
 
 # add_newline = true
@@ -20,25 +19,50 @@ palette = 'catppuccin_mocha'
 [username]
 style_user = 'bold green'
 style_root = 'bold red'
-format = '[$user]($style)'
+format = '[$user]($style) '
 disabled = false
 show_always = true
 
 [hostname]
+style = 'bold blue'
 ssh_only = false
-format = '[$ssh_symbol](bold blue) on [$hostname](bold blue) '
-trim_at = '.companyname.com'
-disabled = false
+format = 'in [$hostname]($style) '
 
 [character]
 success_symbol = '[❯](bold green)'
 error_symbol = '[❯](bold red)'
 
+[os]
+disabled = false
+style = 'fg:bold blue'
+
+[os.symbols]
+Windows = "󰍲 "
+Ubuntu = "󰕈 "
+SUSE = " "
+Raspbian = "󰐿 "
+Mint = "󰣭 "
+Macos = "󰀵 "
+Manjaro = " "
+Linux = "󰌽 "
+Gentoo = "󰣨 "
+Fedora = "󰣛 "
+Alpine = " "
+Amazon = " "
+Android = " "
+Arch = "󰣇 "
+Artix = "󰣇 "
+CentOS = " "
+Debian = "󰣚 "
+Redhat = "󱄛 "
+RedHatEnterprise = "󱄛 "
+Pop = " "
 [directory]
-style = 'bold fg:blue'
+read_only = ""
+style = 'bold fg:yellow'
 format = '[$path ]($style)'
 truncation_length = 3
-truncation_symbol = '.../'
+truncation_symbol = '../'
 truncate_to_repo = false
 
 [directory.substitutions]
@@ -53,20 +77,13 @@ symbol = ' '
 format = '[on](flamingo) [$symbol$branch ]($style)'
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
-style = "cyan"
-conflicted = "​"
-untracked = "​"
-modified = "​"
-staged = "​"
-renamed = "​"
-deleted = "​"
-stashed = "≡"
+style = 'fg:green'
+format = '([$all_status$ahead_behind]($style) )'
 
 [git_metrics]
-added_style = 'bold blue'
-# Note: the wrapping ( ) will result in empty string if all the variables within it are empty
-format = '([+$added]($added_style)/[-$deleted]($deleted_style) )'
+added_style = 'bold green'
+deleted_style = 'bold red'
+format = '[+$added]($added_style)/[-deleted]($deleted_style)'
 
 [fill]
 symbol = ' '
@@ -112,6 +129,19 @@ purple = '#B48EAD'
 gray = '#434C5E'
 black = '#2E3440'
 white='#D8DEE9'
+
+[palettes.onedark]
+dark_blue='#61afef'
+blue='#56b6c2'
+red='#e06c75'
+green='#98c379'
+purple='#c678dd'
+cyan='#56b6c2'
+orange='#be5046'
+yellow='#e5c07b'
+gray='#828997'
+white ='#abb2bf'
+black='#2c323c'
 
 [palettes.catppuccin_mocha]
 rosewater = "#f5e0dc"
