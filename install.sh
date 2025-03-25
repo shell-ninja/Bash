@@ -63,6 +63,7 @@ common_packages=(
     figlet
     fzf
     git
+    less
     zoxide
 )
 
