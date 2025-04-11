@@ -52,8 +52,9 @@ alias disk='fn_resources __disk'
 alias find='nvim $(fzf --preview="bat --color=always {}")'
 
 #nvim
-alias nv='nvim'
+alias nvm='nvim .'
 alias open='nvim .'
+alias snv='sudo -E nvim -d'
 
 # check updates
 alias cu='fn_check_updates'
@@ -84,7 +85,6 @@ alias info='git_info'
 # others
 alias nc='clr && neofetch'
 alias neofetch='clr && neofetch'
-alias fastfetch='clr && fastfetch'
 alias ff='clr && fastfetch'
 alias sys='btop'
 alias clock='tty-clock -c -t -D -s'

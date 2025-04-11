@@ -19,6 +19,7 @@ if command -v fastfetch &> /dev/null; then
         if [[ -d "$HOME/.local/share/fastfetch" ]]; then
             ffconfig=hypr
             fastfetch --config "$ffconfig"
+            alias fastfetch='clr && fastfetch --config $ffconfig'
         else
             fastfetch
         fi
