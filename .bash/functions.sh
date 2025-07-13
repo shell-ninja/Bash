@@ -469,3 +469,32 @@ ffimg() {
         return 1
     fi
 }
+
+ss() {
+    aur=$(command -v yay || command -v paru)
+    yay=$(command -v yay)
+    paru=$(command -v paru)
+
+    if [[ "$aur" == "$yay" ]]; then 
+        yay -Slq | fzf --multi --preview 'yay -Sii {1}' --preview-window=down:75% | xargs -ro yay -S --noconfirm
+    elif [[ "$aur" == "$paru" ]]; then 
+        paru -Slq | fzf --multi --preview 'paru -Sii {1}' --preview-window=down:75% | xargs -ro paru -S --noconfirm
+    else
+        pkg="$(command -v apt || command -v dnf || command -v zypper)"
+
+        search() {
+            local package="$1"
+            if [[ -z "$package" ]]; then
+                echo -e "Please add your package name."
+                echo -e "Usage: ss <package_name>"
+
+                return
+            else
+                $pkg search $package
+            fi
+        }
+
+        search $1
+
+    fi
+}

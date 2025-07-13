@@ -13,7 +13,7 @@ source ~/.bash/functions.sh
 #==============================================================================
 
 ## list ##
-alias ls='eza --color=always --icons=always'
+alias ls='eza -T --level=1 --color=always --icons=always'
 alias la='eza -a --icons=always'
 alias ll='eza -l -a --icons=always --no-time'
 alias lst='eza -T --level=2 --color=always --icons=always'
@@ -89,6 +89,8 @@ alias ff='clr && fastfetch'
 alias sys='btop'
 alias clock='tty-clock -c -t -D -s'
 alias mat='cmatrix'
+
+alias sddt='sddm-greeter-qt6 --test-mode --theme'
 
 alias style="~/.bash/change_prompt.sh"
 
