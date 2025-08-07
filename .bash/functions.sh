@@ -296,18 +296,15 @@ push() {
             else
                 printf "=> %s branch\n" "$branch_name"
                 printf "\nWrite the commit message\n"
-                read -p "=> " msg
+
+                if [[ -n "$(command -v gum)" ]]; then
+                    msg="$(gum input --placeholder "Write your commit message")"
+                else
+                    read -p "=> " msg
+                fi
                 sleep 0.5
 
-                if command -v gum &> /dev/null; then
-                    gum spin --spinner dot \
-                        --title "Pushing to branch: $branch_name" -- \
-                        sleep 2
-                    __push "$branch_name" "$msg" &> /dev/null
-                else
-                    printf "Pushing to branch: %s\n" "$branch_name"
-                    __push "$branch_name" "$msg" &> /dev/null
-                fi
+                __push "$branch_name" "$msg" &> /dev/null
 
                 sleep 1
 
