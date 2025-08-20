@@ -176,26 +176,26 @@ msg act "Installing bash files..." && sleep 0.5
 
 # Check and backup the directories and file
 for item in "$HOME/.bash" "$HOME/.bashrc"; do
-    mkdir -p ~/.Bash-Backup-${USER}
+    mkdir -p ~/.bash-backup-${USER}
     if [[ -d $item ]]; then
         case $item in
             $HOME/.bash)
                 msg att "A ${green}.bash${end} directory is available. backing it up.." 
-                mv "$item" "$HOME/.Bash-Backup-${USER}/.bash"-$(date +%I:%M:%S%p) 2>&1 | tee -a "$log"
+                mv "$item" "$HOME/.bash-backup-${USER}/.bash"-$(date +%I:%M:%S%p) 2>&1 | tee -a "$log"
                 ;;
         esac
     elif [[ -f $item ]]; then
         case $item in
             $HOME/.bashrc)
                 msg att "A ${cyan}.bashrc${end} file is available, backing it up.." 
-                mv "$item" "$HOME/.Bash-Backup-${USER}/.bashrc"-$(date +%I:%M:%S%p) 2>&1 | tee -a "$log"
+                mv "$item" "$HOME/.bash-backup-${USER}/.bashrc"-$(date +%I:%M:%S%p) 2>&1 | tee -a "$log"
                 ;;
         esac
     fi
 done
 
 # now copy the .bash directory into the "$HOME" directory.
-cp -r "$dir/.bash" "$HOME/" 2>&1 | tee -a "$log"
+cp -r "$HOME/.cache/Bash/.bash" ~/ 2>&1 | tee -a "$log"
 ln -sf ~/.bash/.bashrc ~/.bashrc 2>&1 | tee -a "$log"
 
 # installing bash autosuggestions and syntal highlighting.
@@ -207,7 +207,7 @@ if [ -d ~/.bash ]; then
 
     if [ -f ~/.blerc ]; then
         msg act "Backing up ~/.blerc file"
-        mv ~/.blerc "$HOME/Bash-Backup-${USER}/"
+        mv ~/.blerc "$HOME/bash-backup-${USER}/"
         ln -sf ~/.bash/.blerc ~/.blerc 2>&1 | tee -a "$log"
     fi
 
@@ -216,9 +216,6 @@ if [ -d ~/.bash ]; then
             msg act "Backing up your old starship.toml..." && sleep 1
             mv ~/.config/starship.toml ~/.config/starship.toml.back
         fi
-        cp "$dir/starship.toml" "$HOME/.config/"
-        msg dn "Copied the new starship.toml file."
-
 
         # Comment out the PS1 line
         sed -i 's/^PS1=/# PS1=/' ~/.bash/.bashrc
