@@ -124,3 +124,5 @@ Simply go to `~/.bash` directory. Inside it, you will find `.bashrc`, `alias` an
 | Shortcut | Command                         | Description                                         |
 | -------- | ------------------------------- | --------------------------------------------------- |
 | `style`  | `bash ~/.bash/change_prompt.sh` | Execute a script that changes the style of the bash |
+
+this is for a testing tutorial.
