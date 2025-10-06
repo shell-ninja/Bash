@@ -49,7 +49,7 @@ msg() {
 }
 
 # log file
-dir=`pwd`
+dir="$(dirname "$(realpath "$0")")"
 log="$dir/bash-install-$(date +%I:%M_%p).log"
 touch "$log"
 
@@ -195,8 +195,8 @@ for item in "$HOME/.bash" "$HOME/.bashrc"; do
 done
 
 # now copy the .bash directory into the "$HOME" directory.
-cp -r "$HOME/.cache/Bash/.bash" ~/ 2>&1 | tee -a "$log"
-ln -sf ~/.bash/.bashrc ~/.bashrc 2>&1 | tee -a "$log"
+cp -r "$dir/Bash/.bash" ~/ 2>&1 | tee -a "$log"
+[[ -f "$HOME/.bash/.bashrc" ]] && ln -sf ~/.bash/.bashrc ~/.bashrc 2>&1 | tee -a "$log"
 
 # installing bash autosuggestions and syntal highlighting.
 if [ -d ~/.bash ]; then
@@ -264,8 +264,15 @@ fi
 
 sleep 1 && clear
 
-# Call the function with the message and a delay of 0.05 seconds
-msg dn "Bash configuration has been completed! Close the tarminal and open it again." && sleep 2
-exit 0
+# making scripts executable
+if [[ -f "$HOME/.bash/alias.sh" ]]; then
+    if chmod +x "$HOME/.bash"/*; then
+        msg dn "Bash configuration has been completed! Close the tarminal and open it again." && sleep 2
+        exit 0
+    else
+        msg err "Could not make all the scripts executable."
+        printf " Run: \n \"chmod +x ~/.bash/*\" in your terminal"
+    fi
+fi
 
 #__________ ( code finishes here ) __________#
