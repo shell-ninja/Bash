@@ -195,7 +195,8 @@ for item in "$HOME/.bash" "$HOME/.bashrc"; do
 done
 
 # now copy the .bash directory into the "$HOME" directory.
-cp -r "$dir/Bash/.bash" ~/ 2>&1 | tee -a "$log"
+cp -r "$dir/.bash" ~/ 2>&1 | tee -a "$log"
+
 [[ -f "$HOME/.bash/.bashrc" ]] && ln -sf ~/.bash/.bashrc ~/.bashrc 2>&1 | tee -a "$log"
 
 # installing bash autosuggestions and syntal highlighting.
