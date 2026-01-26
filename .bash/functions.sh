@@ -1,63 +1,72 @@
 # ~/.bash/functions.sh
 
 #==============================================================================
+# ███████╗██╗  ██╗███████╗██╗     ██╗     
+# ██╔════╝██║  ██║██╔════╝██║     ██║     
+# ███████╗███████║█████╗  ██║     ██║     
+# ╚════██║██╔══██║██╔══╝  ██║     ██║     
+# ███████║██║  ██║███████╗███████╗███████╗
+# ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+#                                         
+# ███╗   ██╗██╗███╗   ██╗     ██╗ █████╗  
+# ████╗  ██║██║████╗  ██║     ██║██╔══██╗ 
+# ██╔██╗ ██║██║██╔██╗ ██║     ██║███████║ 
+# ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║ 
+# ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║ 
+# ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝ 
 
-# ███████╗██╗  ██╗███████╗██╗         ███╗   ██╗██╗███╗   ██╗     ██╗ █████╗ 
-# ██╔════╝██║  ██║██╔════╝██║         ████╗  ██║██║████╗  ██║     ██║██╔══██╗
-# ███████╗███████║█████╗  ██║         ██╔██╗ ██║██║██╔██╗ ██║     ██║███████║
-# ╚════██║██╔══██║██╔══╝  ██║         ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║
-# ███████║██║  ██║███████╗███████╗    ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║
-# ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝
+# color defination
+red="\e[1;31m"
+green="\e[1;32m"
+yellow="\e[1;33m"
+blue="\e[1;34m"
+magenta="\e[1;1;35m"
+cyan="\e[1;36m"
+orange="\x1b[38;5;214m"
+end="\e[1;0m"
                                                                             
 #==============================================================================
-
 # copy and paste Function
 fn_copy_paste() {
+
     local destination="${!#}"  # Last parameter as the destination
     local items=("${@:1:$(($#-1))}")  # All parameters except the last one (items to copy)
 
+    [[ ! -d "$destination" ]] && printf "Creating $destination\n"
+
+    mkdir -p "$destination"
+
+    echo
+
     for item in "${items[@]}"; do
+        name="${item##*/}"
+
         if [[ -f "$item" ]]; then
-            printf ":: Copying a file\n"
-            cp "$item" "$destination"
+            printf "\n${cyan}::${end} Copying file $name:\n"
+
+            pv "$item" > "$destination/$name"
         elif [[ -d "$item" ]]; then
-            printf ":: Copying a directory\n"
-            cp -r "$item" "$destination"
+            printf "\n${cyan}::${end} Copying directory $name:\n"
+
+            tar -cf - "$item" \
+                | pv -N "$name" \
+                | tar -xf - -C "$destination"
         fi
     done
 }
 
-# Copy file with a progress bar
-cpb() {
-    set -e
-    strace -q -ewrite cp -- "${1}" "${2}" 2>&1 |
-    awk '{
-        count += $NF
-        if (count % 10 == 0) {
-            percent = count / total_size * 100
-            printf "%3d%% [", percent
-            for (i=0;i<=percent;i++)
-                printf "="
-            printf ">"
-            for (i=percent;i<100;i++)
-                printf " "
-            printf "]\r"
-        }
-    }
-    END { print "" }' total_size="$(stat -c '%s' "${1}")" count=0
-}
 
 # remove files and directories
 fn_removal() {
     for item in "$@"; do
         if [[ -f "$item" ]]; then
-            printf ":: Removing a file\n"
+            printf "${cyan}::${end} Removing a file\n"
             rm "$item"
         elif [[ -d "$item" ]]; then
-            printf ":: Removing a directory\n"
+            printf "${cyan}::${end} Removing a directory\n"
             rm -rf "$item"
         else
-            printf "[ !! ]\n$item does not exist or is neither a regular file nor a directory\n"
+            printf "${red}[ !! ]${end}\n$item does not exist or is neither a regular file nor a directory\n"
         fi
     done
 }
