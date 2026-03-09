@@ -319,6 +319,8 @@ push() {
 
                 # Check the result of the last command
                 if [[ "$untracked_count" -eq 0 || "$unstaged_count" -eq 0 || "$staged_count" -eq 0 ]]; then
+                    dir="$(dirname "${BASH_SOURCE[0]}")"
+                    paplay "$dir/fah.mp3"
                     printf ":: Pushed successfully!\n"
                 else
                     printf "!! Sorry, push failed. Please check for errors.\n"
