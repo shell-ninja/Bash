@@ -529,3 +529,78 @@ play() {
     dir="$(dirname "${BASH_SOURCE[0]}")"
     paplay "$dir/fah.mp3"
 }
+
+# create vite app
+vite() {
+
+set -e
+
+clear
+printf "Project name: \n"
+PROJ_NAME=$(gum input --placeholder "my-app")
+
+[[ -z "$PROJ_NAME" ]] && { echo "❌ Missing project name"; exit 1; }
+
+# Detect package manager
+for pm in npm pnpm yarn bun; do
+    if command -v "$pm" >/dev/null 2>&1; then
+        PKG_MANAGER=$pm
+        break
+    fi
+done
+
+[[ -z "$PKG_MANAGER" ]] && { echo "❌ No package manager found"; exit 1; }
+
+echo "🚀 Using $PKG_MANAGER"
+
+# Create project (non-interactive)
+case $PKG_MANAGER in
+    npm)
+        npm create vite@latest "$PROJ_NAME" -y -- --template react --no-interactive
+        ;;
+    pnpm)
+        pnpm create vite "$PROJ_NAME" --template react --no-interactive
+        ;;
+    yarn)
+        yarn create vite "$PROJ_NAME" --template react --no-interactive
+        ;;
+    bun)
+        bun create vite "$PROJ_NAME" --template react --no-interactive
+        ;;
+esac
+
+cd "$PROJ_NAME"
+
+echo "📦 Installing dependencies..."
+$PKG_MANAGER install
+
+# Setup VS Code auto-run task
+mkdir -p .vscode
+
+cat > .vscode/tasks.json << 'EOF'
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
+EOF
+
+echo "🧠 Opening in VS Code..."
+command -v code >/dev/null && code .
+
+echo "🌐 Dev server will auto-start inside VS Code terminal"
+echo "✅ Done!" && sleep 1
+
+exit 0
+
+}
