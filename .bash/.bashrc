@@ -39,12 +39,18 @@ if [ -f /etc/bashrc ]; then
 fi
 
 # ================================= prompt ================================= #
-PS1='\n\e[1;36m╭─ \e[1;37m\u\e[1;34m@\e[1;37m\h\e[1;0m in $(if [[ "$PWD" = "$HOME" ]]; then echo "\e[1;36m󰜥"; elif [[ "$PWD" = "/" ]]; then echo "\e[1;36m\e[1;0m"; else echo "\e[1;33m\w"; fi)\n\e[1;36m╰──\e[1;32m󰘧\e[1;0m '
+PS1='\n\[\e[38;5;238m\]╭ \[\e[1;34m\]$(if [[ "$PWD" == "$HOME" ]]; then echo -n ""; elif [[ "$PWD" == "/" ]]; then echo -n ""; else echo -n ""; fi)  \w\[\e[0m\]\n\[\e[38;5;238m\]╰ \[\e[1;32m\]❯\[\e[0m\] '
 
 # set prompt starship
-# export STARSHIP_CONFIG=~/.bash/starship/starship-simple.toml
-# eval "$(starship init bash)"
+# export STARSHIP_CONFIG=/home/shell-ninja/.bash/starship/starship-macos_frame.toml
 
+# Cache starship init to speed up terminal start
+STARSHIP_CACHE="$HOME/.cache/starship_init.bash"
+if [[ ! -s "$STARSHIP_CACHE" || "$(command -v starship)" -nt "$STARSHIP_CACHE" ]]; then
+    mkdir -p "$(dirname "$STARSHIP_CACHE")"
+    starship init bash > "$STARSHIP_CACHE"
+fi
+# source "$STARSHIP_CACHE"
 
 
 # User specific environment
@@ -176,6 +182,3 @@ bind "set vi-ins-mode-string "
 
 # ================================= ble-attach ================================= #
 [[ ${BLE_VERSION-} ]] && ble-attach
-
-
-# ================================= API Keys ================================= #

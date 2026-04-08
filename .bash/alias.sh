@@ -97,7 +97,8 @@ alias mat='cmatrix'
 
 alias sddt='sddm-greeter-qt6 --test-mode --theme'
 
-alias style="~/.bash/change_prompt.sh"
+alias prompt="~/.bash/change_prompt.sh"
+alias style="~/.bash/change_style.sh"
 
 # make executable script
 alias exe='chmod +x'

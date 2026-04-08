@@ -83,9 +83,14 @@ escaped_PS1=$(printf '%s\n' "$PS1" | sed -e 's/\\/\\\\/g' -e 's/\//\\\//g' -e ':
 # bash file
 bashrc=~/.bash/.bashrc
 
-# Update the PS1 line in the specified file
-sed -i "/^PS1=/c\\PS1='$escaped_PS1'" "$bashrc"
+# Update the PS1 line in the specified file whether it's commented or not
+sed -i -E "s/^[# ]*PS1=.*/PS1='$escaped_PS1'/g" "$bashrc"
 
-source ~/.bash/.bashrc
+# Disable Starship so the native PS1 applies correctly
+sed -i 's/^source "$STARSHIP_CACHE"/# source "$STARSHIP_CACHE"/g' "$bashrc"
 
-printf "Now relaunch your terminal and you're good to go...\n"
+printf "\n  \e[1;34m[*]\e[0m Setting prompt to style: \e[1;32m$style\e[0m\n"
+printf "  \e[1;34m[*]\e[0m Applying changes immediately...\n"
+sleep 0.5
+exec bash
+
