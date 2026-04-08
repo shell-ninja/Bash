@@ -14,59 +14,74 @@
 # ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║ 
 # ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║ 
 # ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝ 
-
-# color defination
-red="\e[1;31m"
-green="\e[1;32m"
-yellow="\e[1;33m"
-blue="\e[1;34m"
-magenta="\e[1;1;35m"
-cyan="\e[1;36m"
-orange="\x1b[38;5;214m"
-end="\e[1;0m"
                                                                             
 #==============================================================================
 # copy and paste Function
 fn_copy_paste() {
 
-    local destination="${!#}"  # Last parameter as the destination
-    local items=("${@:1:$(($#-1))}")  # All parameters except the last one (items to copy)
-
-    [[ ! -d "$destination" ]] && printf "Creating $destination\n"
+    local destination="${!#}"
+    local items=("${@:1:$(($#-1))}")
 
     mkdir -p "$destination"
 
-    echo
-
     for item in "${items[@]}"; do
         name="${item##*/}"
+        SUDO=""
+
+        # ---- detect sudo need ----
+        if [[ ! -r "$item" ]]; then
+            SUDO="sudo"
+        elif [[ ! -w "$destination" || ! -x "$destination" ]]; then
+            SUDO="sudo"
+        fi
 
         if [[ -f "$item" ]]; then
-            printf "\n${cyan}::${end} Copying file $name:\n"
+            printf "\n:: Copying file $name to $destination\n"
 
-            pv "$item" > "$destination/$name"
+        if [[ "$name" == *.iso ]]; then
+                # ISO-specific copy to avoid sparse file issues
+                if [[ -n "$SUDO" ]]; then
+                    pv "$item" | sudo dd of="$destination/$name" bs=4M status=none
+                else
+                    pv "$item" | dd of="$destination/$name" bs=4M status=none
+                fi
+            else
+                # Normal file copy
+                if [[ -n "$SUDO" ]]; then
+                    pv "$item" | sudo tee "$destination/$name" > /dev/null
+                else
+                    pv "$item" > "$destination/$name"
+                fi
+            fi
         elif [[ -d "$item" ]]; then
-            printf "\n${cyan}::${end} Copying directory $name:\n"
+            printf "\n:: Copying directory %s\n" "$name"
 
-            tar -cf - "$item" \
+            if [[ -n "$SUDO" ]]; then
+                sudo tar -cf - "$item" \
+                | pv -N "$name" \
+                | sudo tar -xf - -C "$destination"
+            else
+                tar -cf - "$item" \
                 | pv -N "$name" \
                 | tar -xf - -C "$destination"
+            fi
+        else
+            printf "!! Skipping unknown type: %s\n" "$item"
         fi
     done
 }
-
 
 # remove files and directories
 fn_removal() {
     for item in "$@"; do
         if [[ -f "$item" ]]; then
-            printf "${cyan}::${end} Removing a file\n"
+            printf ":: Removing a file\n"
             rm "$item"
         elif [[ -d "$item" ]]; then
-            printf "${cyan}::${end} Removing a directory\n"
+            printf ":: Removing a directory\n"
             rm -rf "$item"
         else
-            printf "${red}[ !! ]${end}\n$item does not exist or is neither a regular file nor a directory\n"
+            printf "[ !! ]\n$item does not exist or is neither a regular file nor a directory\n"
         fi
     done
 }
@@ -201,11 +216,11 @@ fn_compile_cpp() {
     if [ -n "$(command -v g++)" ]; then
         printf "\e[0;36m[ * ] - Compiling...!\e[0m\n\n"
 
-        if g++ -std=c++20 "$filename".cpp -o "$filename"; then
+        if g++ -std=c++20 "${filename}.cpp" -o "$filename"; then
             printf "\e[1;92m[ ✓ ] - Successfully compiled your code...!\e[0m\n"
             if [[ "$2" == "-o" ]]; then
                 printf "\e[1;92m        Output: \e[0m\n\n" 
-                ./$filename
+                "./$filename"
             fi
         else
             printf "\n\e[1;91m[  ] - Error: Could not compile your code...!\e[0m\n"
@@ -319,6 +334,7 @@ push() {
 
                 # Check the result of the last command
                 if [[ "$untracked_count" -eq 0 || "$unstaged_count" -eq 0 || "$staged_count" -eq 0 ]]; then
+
                     dir="$(dirname "${BASH_SOURCE[0]}")"
                     paplay "$dir/fah.mp3"
                     printf ":: Pushed successfully!\n"
@@ -344,15 +360,18 @@ function y() {
 
 # Function to capture the start time
 preexec() {
-    export command_start_time=$(date +%s)
+    echo "$EPOCHSECONDS" > "/dev/shm/cmd_start_$$" 2>/dev/null
 }
+PS0='$(preexec)'
 
 # Function to capture the end time and calculate elapsed time
 precmd() {
     # Check if we are in transient prompt mode
     if [[ $prompt_ps1_transient != "always" ]]; then
-        if [[ -n $command_start_time && $command_start_time -ne 0 ]]; then
-            local command_end_time=$(date +%s)
+        if [[ -f "/dev/shm/cmd_start_$$" ]]; then
+            local command_start_time=$(< "/dev/shm/cmd_start_$$")
+            rm -f "/dev/shm/cmd_start_$$" 2>/dev/null
+            local command_end_time=$EPOCHSECONDS
             local elapsed_time=$((command_end_time - command_start_time))
 
             # Convert elapsed time to minutes and seconds
@@ -379,7 +398,6 @@ precmd() {
         export elapsed_time_display=""
     fi
 
-    export command_start_time=0  # Reset start time to 0 after each command
 }
 
 # Function to capture the current time
@@ -505,4 +523,9 @@ ss() {
         search $1
 
     fi
+}
+
+play() {
+    dir="$(dirname "${BASH_SOURCE[0]}")"
+    paplay "$dir/fah.mp3"
 }

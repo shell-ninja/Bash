@@ -1,46 +1,45 @@
 #!/usr/bin/env bash
 iatest=$(expr index "$-" i)
 #==============================================================================
-
-# ███████╗██╗  ██╗███████╗██╗         ███╗   ██╗██╗███╗   ██╗     ██╗ █████╗ 
-# ██╔════╝██║  ██║██╔════╝██║         ████╗  ██║██║████╗  ██║     ██║██╔══██╗
-# ███████╗███████║█████╗  ██║         ██╔██╗ ██║██║██╔██╗ ██║     ██║███████║
-# ╚════██║██╔══██║██╔══╝  ██║         ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║
-# ███████║██║  ██║███████╗███████╗    ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║
-# ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝
+# ███████╗██╗  ██╗███████╗██╗     ██╗     
+# ██╔════╝██║  ██║██╔════╝██║     ██║     
+# ███████╗███████║█████╗  ██║     ██║     
+# ╚════██║██╔══██║██╔══╝  ██║     ██║     
+# ███████║██║  ██║███████╗███████╗███████╗
+# ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+#                                         
+# ███╗   ██╗██╗███╗   ██╗     ██╗ █████╗  
+# ████╗  ██║██║████╗  ██║     ██║██╔══██╗ 
+# ██╔██╗ ██║██║██╔██╗ ██║     ██║███████║ 
+# ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║ 
+# ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║ 
+# ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝ 
                                                                             
 #==============================================================================
 
 
-# ================================= fastfetch ================================= #
-if command -v fastfetch &> /dev/null; then
-    if [[ $- == *i* ]]; then
-        if [[ -d "$HOME/.local/share/fastfetch" ]]; then
-            export ffconfig=minimal
-            fastfetch --config "$ffconfig"
-            alias fastfetch='clr && fastfetch --config "$ffconfig"'
-        else
-            fastfetch
-        fi
-    fi
-fi
-
-
-
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
-[[ $- == *i* ]] && source ~/.local/share/blesh/ble.sh --attach=none
+source ~/.local/share/blesh/ble.sh --attach=none
+
+# ================================= fastfetch ================================= #
+if command -v fastfetch &> /dev/null; then
+    if [[ -d "$HOME/.local/share/fastfetch" ]]; then
+        export ffconfig=minimal
+        fastfetch --config "$ffconfig"
+        alias fastfetch='clr && fastfetch --config "$ffconfig"'
+    else
+        fastfetch
+    fi
+fi
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
     . /etc/bashrc
 fi
 
-# Call update_ps1 before each prompt
-export PROMPT_COMMAND='precmd; preexec'
-
 # ================================= prompt ================================= #
-PS1='$(if [[ "$PWD" = "$HOME" ]]; then echo "\e[1;36m\e[1;0m"; elif [[ "$PWD" = "/" ]]; then echo " \e[1;0m"; elif [[ ! "$PWD" == "$HOME" ]]; then echo "\n\w"; fi)\n\e[1;32m❯\e[1;0m '
+PS1='\n\e[1;36m╭─ \e[1;37m\u\e[1;34m@\e[1;37m\h\e[1;0m in $(if [[ "$PWD" = "$HOME" ]]; then echo "\e[1;36m󰜥"; elif [[ "$PWD" = "/" ]]; then echo "\e[1;36m\e[1;0m"; else echo "\e[1;33m\w"; fi)\n\e[1;36m╰──\e[1;32m󰘧\e[1;0m '
 
 # set prompt starship
 # export STARSHIP_CONFIG=~/.bash/starship/starship-simple.toml
@@ -68,11 +67,6 @@ show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head
 export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
 
-
-# =============== Load .bashrc.d Scripts Efficiently =============== #
-if [ -d ~/.bashrc.d ]; then
-    find ~/.bashrc.d -type f -name '*.sh' -exec . {} \;
-fi
 
 
 # ================================= fzf ================================= #
@@ -135,7 +129,7 @@ alias hell='_thefuck_init && hell'
 
 # For zoxide integration with FZF (if zoxide is installed)
 if command -v zoxide &> /dev/null; then
-    eval "$(zoxide init bash)"
+    eval "$(zoxide init bash --cmd cd)"
     alias zi='zoxide query -i | xargs -r eza --color=always --icons=always'
     _ZO_DOCTOR=0
 fi
@@ -160,7 +154,7 @@ shopt -s checkwinsize
 
 # Causes bash to append to history instead of overwriting it so if you start a new terminal, you have old session history
 shopt -s histappend
-PROMPT_COMMAND='history -a'
+PROMPT_COMMAND="history -a; precmd"
 alias hist="history | grep"
 
 
@@ -173,9 +167,7 @@ bleopt prompt_rps1='\n$(git rev-parse --is-inside-work-tree >/dev/null 2>&1 && e
 
 
 # ================================= vi mode ================================= #
-if [[ $- == *i* ]]; then
-  bind 'set editing-mode vi'
-fi
+bind 'set editing-mode vi'
 bleopt keymap_vi_mode_show:=
 bind "set show-mode-in-prompt on"
 bind "set vi-cmd-mode-string "
@@ -183,8 +175,7 @@ bind "set vi-ins-mode-string "
 
 
 # ================================= ble-attach ================================= #
-if [[ ${BLE_VERSION-} ]]; then
-    ble-attach
-else
-    (source ~/.local/share/blesh/ble.sh --attach=none &)  # Load in background
-fi
+[[ ${BLE_VERSION-} ]] && ble-attach
+
+
+# ================================= API Keys ================================= #

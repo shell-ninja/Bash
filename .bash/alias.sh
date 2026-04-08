@@ -35,7 +35,7 @@ alias fedbup="sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg" # fedora
 alias ..='cd ..'    # go back
 alias ...='cd ../..'    # go back 2 steps
 alias .='cd /'  # go to root dir
-alias cd='z'
+# alias cd='z'
 
 # other
 alias src='source ~/.bash/.bashrc' #source .bashrc
@@ -44,10 +44,11 @@ alias cls='clear'
 alias clar='clear'
 alias c='clear'
 alias q='exit'
+alias nrd='npm run dev' # run vite/react project locally
 
 alias rmv='fn_removal' #remove both file & direvtory ( one file / directory at a time )
 alias srm='sudo rm -rf' # remove in a sude command
-alias cp='fn_copy_paste'
+alias cpp='fn_copy_paste'
 
 # disk spaces and RAM usage
 alias du='du -sh'
@@ -57,10 +58,11 @@ alias disk='fn_resources __disk'
 #fzf
 alias find='nvim $(fzf --preview="bat --color=always {}")'
 
-#nvim
+#nvim && code
 alias nvm='nvim .'
 alias open='nvim .'
 alias snv='sudo -E nvim -d'
+# [[ -n "$(command -v codium)" ]] && alias code='codium' || alias code='code'
 
 # check updates
 alias cu='fn_check_updates'
@@ -72,9 +74,6 @@ alias update='fn_update'
 # install and remove package
 alias install='fn_install'
 alias remove='fn_uninstall'
-
-# compiling c++ file using gcc
-alias cpp='fn_compile_cpp'
 
 # git alias
 alias add='git add .'

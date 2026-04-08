@@ -18,13 +18,20 @@
 #==============================================================================
 # Function to display the menu
 display_menu() {
-    echo "Select a prompt style:"
-    echo "1) Style 1"
-    echo "2) Style 2"
-    echo "3) Style 3"
-    echo "4) Style 4"
-    echo "5) Style 5"
-    echo "q) Quit"
+    clear
+    echo -e "\e[1;36m╭────────────────────────────────────────╮\e[0m"
+    echo -e "\e[1;36m│\e[0m \e[1;37m        Select a prompt style         \e[0m \e[1;36m│\e[0m"
+    echo -e "\e[1;36m╰────────────────────────────────────────╯\e[0m"
+    echo -e "  \e[1;35m1)\e[0m Classic Minimal \e[90m(Original 1)\e[0m"
+    echo -e "  \e[1;32m2)\e[0m Inline Path     \e[90m(Original 2)\e[0m"
+    echo -e "  \e[1;34m3)\e[0m Classic 2-Line  \e[90m(Original 3)\e[0m"
+    echo -e "  \e[1;35m4)\e[0m Detailed 2-Line \e[90m(Original 4)\e[0m"
+    echo -e "  \e[1;33m5)\e[0m Bracket Layout  \e[90m(Original 5)\e[0m"
+    echo -e "  \e[1;36m6)\e[0m Flow            \e[90m(Clean Two-Line)\e[0m"
+    echo -e "  \e[1;32m7)\e[0m Aesthetic Neon  \e[90m(Vibrant Vibes)\e[0m"
+    echo -e "  \e[1;35m8)\e[0m Crystal Block   \e[90m(Modern Horizon)\e[0m"
+    echo -e "  \e[1;31mq)\e[0m Quit"
+    echo ""
 }
 
 display_menu
@@ -47,6 +54,18 @@ case $style in
         ;;
     5)
         PS1='\n╭( \u )─[$(if [[ "$PWD" = "$HOME" ]]; then echo " \e[1;36m \e[1;0m"; elif [[ "$PWD" = "/" ]]; then echo " \e[1;32m \e[1;0m"; else echo "\e[1;33m \w\e[1;0m"; fi) ]─( $(current_time) )\n╰─\e[1;32m❯\e[1;0m '
+        ;;
+    6)
+        # Flow: Two-line subtle
+        PS1='\n\[\e[38;5;238m\]╭ \[\e[1;34m\]$(if [[ "$PWD" == "$HOME" ]]; then echo -n ""; elif [[ "$PWD" == "/" ]]; then echo -n ""; else echo -n ""; fi)  \w\[\e[0m\]\n\[\e[38;5;238m\]╰ \[\e[1;32m\]❯\[\e[0m\] '
+        ;;
+    7)
+        # Sleek vibrant neon vibes
+        PS1='\n\[\e[1;35m\]$(if [[ "$PWD" == "$HOME" ]]; then echo -n ""; elif [[ "$PWD" == "/" ]]; then echo -n ""; else echo -n "󰉋"; fi)\[\e[0m\] \[\e[1;36m\]\w\[\e[0m\] \[\e[1;32m\]\[\e[0m\] '
+        ;;
+    8)
+        # Horizon Block / Modern Crystal layout
+        PS1='\n\[\e[38;5;238m\][ \[\e[1;36m\]$(if [[ "$PWD" == "$HOME" ]]; then echo -n ""; elif [[ "$PWD" == "/" ]]; then echo -n ""; else echo -n "󰉋"; fi) \[\e[38;5;253m\]\w \[\e[38;5;238m\]] \[\e[1;33m\]➜\[\e[0m\] '
         ;;
     q)
         echo "Quitting..."
