@@ -35,7 +35,7 @@ display_menu() {
 }
 
 display_menu
-read -n1 -rep "Choose Your style: " style
+read -r -n 1 -p "Choose Your style: " style
 
 # case to choose the PS1 variable
 # everything you see "\e[..." are just colors...

@@ -54,10 +54,11 @@ fi
 
 
 # User specific environment
-if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
-    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
-fi
-export PATH
+for p in "$HOME/.local/bin" "$HOME/bin" "$HOME/.opencode/bin"; do
+    if [[ ":$PATH:" != *":$p:"* ]] && [[ -d "$p" ]]; then
+        export PATH="$p:$PATH"
+    fi
+done
 
 # User specific aliases and functions
 if [ -d ~/.bashrc.d ]; then

@@ -15,90 +15,87 @@ source ~/.bash/functions.sh
 # ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║ 
 # ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║ 
 # ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝ 
-                                                                            
 #==============================================================================
 
 ## list ##
-alias ls='eza -T --level=1 --color=always --icons=always'
-alias la='eza -a --icons=always'
-alias ll='eza -l -a --icons=always --no-time'
-alias lst='eza -T --level=2 --color=always --icons=always'
-alias lsf='eza -f -a --color=always --icons=always'
-alias lstd='eza -D -T --level=2 --color=always --icons=always'
-alias tree='eza -T --level=3 --color=always --icons=always'
+alias ls='eza -T --level=1 --color=always --icons=always --group-directories-first'
+alias la='eza -a --icons=always --group-directories-first'
+alias ll='eza -l -a --icons=always --no-time --group-directories-first'
+alias lst='eza -T --level=2 --color=always --icons=always --group-directories-first'
+alias lsf='eza -f -a --color=always --icons=always --group-directories-first'
+alias lstd='eza -D -T --level=2 --color=always --icons=always --group-directories-first'
+alias tree='eza -T --level=3 --color=always --icons=always --group-directories-first'
 
-alias cat='bat --style header --style snip --style changes --style header'  # cat
+alias cat='bat --style header --style snip --style changes --style header'
 
-alias grubup="sudo update-grub" # most other distros like Arch, Ubuntu
-alias susegrub="sudo grub2-mkconfig -o /boot/grub2/grub.cfg"    # opensuse
-alias fedbup="sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg" # fedora
-alias ..='cd ..'    # go back
-alias ...='cd ../..'    # go back 2 steps
-alias .='cd /'  # go to root dir
-# alias cd='z'
+## grub update ##
+alias grubup="sudo update-grub" # Arch, Ubuntu
+alias susegrub="sudo grub2-mkconfig -o /boot/grub2/grub.cfg" # openSUSE
+alias fedbup="sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg" # Fedora
 
-# other
-alias src='source ~/.bash/.bashrc' #source .bashrc
-alias clr='clear'   #clear
+## navigation ##
+alias ..='cd ..'
+alias ...='cd ../..'
+alias .='cd /'
+
+## system & terminal ##
+alias src='source ~/.bash/.bashrc'
+alias clr='clear'
 alias cls='clear'
 alias clar='clear'
 alias c='clear'
 alias q='exit'
-alias nrd='npm run dev' # run vite/react project locally
+alias nrd='npm run dev'
 
-alias rmv='fn_removal' #remove both file & direvtory ( one file / directory at a time )
-alias srm='sudo rm -rf' # remove in a sude command
+## file operations ##
+alias rmv='fn_removal' # remove file & directory safely
+alias srm='sudo rm -rf'
 alias cpp='fn_copy_paste'
 
-# disk spaces and RAM usage
+## system info ##
 alias du='du -sh'
 alias mem='fn_resources __memory'
 alias disk='fn_resources __disk'
 
-#fzf
+## fzf search ##
 alias find='nvim $(fzf --preview="bat --color=always {}")'
 
-#nvim && code
+## editors & IDEs ##
 alias nvm='nvim .'
 alias open='nvim .'
 alias snv='sudo -E nvim -d'
-# [[ -n "$(command -v codium)" ]] && alias code='codium' || alias code='code'
+alias ag='antigravity .'
 
-# check updates
+## package management ##
 alias cu='fn_check_updates'
-
-# updates
-alias dup='sudo zypper dup -y' # distro update for opensuse
+alias dup='sudo zypper dup -y' # openSUSE
 alias update='fn_update'
-
-# install and remove package
 alias install='fn_install'
 alias remove='fn_uninstall'
 
-# git alias
+## git ##
 alias add='git add .'
 alias clone='git clone'
 alias cloned='git clone --depth=1'
 alias branch='git branch -M main'
 alias commit='git commit -m'
-# alias push='git push'
 alias pushm='git push -u origin main'
-alias pusho='git push origin' # and add your branch name 
+alias pusho='git push origin'
 alias pull='git pull'
 alias info='git_info'
 
-# others
+## misc ##
 alias nc='clr && neofetch'
 alias neofetch='clr && neofetch'
 alias ff='clr && fastfetch'
 alias sys='btop'
 alias clock='tty-clock -c -t -D -s'
 alias mat='cmatrix'
-
 alias sddt='sddm-greeter-qt6 --test-mode --theme'
 
+## customizations ##
 alias prompt="~/.bash/change_prompt.sh"
 alias style="~/.bash/change_style.sh"
 
-# make executable script
+## permissions ##
 alias exe='chmod +x'

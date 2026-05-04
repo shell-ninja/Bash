@@ -18,58 +18,61 @@
 #==============================================================================
 # copy and paste Function
 fn_copy_paste() {
-
     local destination="${!#}"
     local items=("${@:1:$(($#-1))}")
 
-    mkdir -p "$destination"
+    mkdir -p "$destination" || {
+        printf "!! Failed to create destination: %s\n" "$destination"
+        return 1
+    }
 
     for item in "${items[@]}"; do
-        name="${item##*/}"
-        SUDO=""
+        item="${item%/}"                 # normalize trailing slash
+        local name="${item##*/}"
+        local SUDO=""
 
         # ---- detect sudo need ----
-        if [[ ! -r "$item" ]]; then
-            SUDO="sudo"
-        elif [[ ! -w "$destination" || ! -x "$destination" ]]; then
+        if [[ ! -r "$item" ]] || [[ ! -w "$destination" || ! -x "$destination" ]]; then
             SUDO="sudo"
         fi
 
         if [[ -f "$item" ]]; then
-            printf "\n:: Copying file $name to $destination\n"
+            printf "\n:: Copying file %s → %s\n" "$name" "$destination"
 
-        if [[ "$name" == *.iso ]]; then
-                # ISO-specific copy to avoid sparse file issues
-                if [[ -n "$SUDO" ]]; then
-                    pv "$item" | sudo dd of="$destination/$name" bs=4M status=none
-                else
-                    pv "$item" | dd of="$destination/$name" bs=4M status=none
-                fi
+            if [[ "$name" == *.iso ]]; then
+                # ISO-safe copy
+                pv "$item" | $SUDO dd of="$destination/$name" bs=4M status=none
             else
-                # Normal file copy
+                # Normal file
                 if [[ -n "$SUDO" ]]; then
                     pv "$item" | sudo tee "$destination/$name" > /dev/null
                 else
                     pv "$item" > "$destination/$name"
                 fi
             fi
+
         elif [[ -d "$item" ]]; then
-            printf "\n:: Copying directory %s\n" "$name"
+            printf "\n:: Copying directory %s → %s\n" "$name" "$destination"
+
+            local parent
+            parent="$(dirname "$item")"
 
             if [[ -n "$SUDO" ]]; then
-                sudo tar -cf - "$item" \
+                sudo tar -C "$parent" -cf - "$name" \
                 | pv -N "$name" \
                 | sudo tar -xf - -C "$destination"
             else
-                tar -cf - "$item" \
+                tar -C "$parent" -cf - "$name" \
                 | pv -N "$name" \
                 | tar -xf - -C "$destination"
             fi
+
         else
             printf "!! Skipping unknown type: %s\n" "$item"
         fi
     done
 }
+
 
 # remove files and directories
 fn_removal() {
@@ -104,31 +107,43 @@ fn_resources(){
     esac
 }
 
+# internal: detect package manager
+_detect_pkg_manager() {
+    [[ -n "$PKG_MANAGER" ]] && return
+    if command -v pacman &>/dev/null; then
+        export PKG_MANAGER="pacman"
+        export AUR_HELPER=$(command -v yay 2>/dev/null || command -v paru 2>/dev/null || echo "")
+    elif command -v dnf &>/dev/null; then
+        export PKG_MANAGER="dnf"
+    elif command -v zypper &>/dev/null; then
+        export PKG_MANAGER="zypper"
+    elif command -v apt-get &>/dev/null; then
+        export PKG_MANAGER="apt"
+    else
+        export PKG_MANAGER="unknown"
+    fi
+}
+
 # check updates
 fn_check_updates() {
-    if [ -n "$(command -v pacman)" ]; then  # Arch Linux
-        # Check for updates
-        aurhlpr=$(command -v yay || command -v paru)
-        aur=$(${aurhlpr} -Qua | wc -l)
-        
-        ofc=$(checkupdates | wc -l)
-
-        # Calculate total available updates
-        upd=$(( ofc + aur ))
-        printf "[ UPDATES ]\n:: You have \e[1;32m$upd\e[0m updates available.\n:: Main: $ofc\n:: Aur: $aur\n"
-    
-    elif [ -n "$(command -v dnf)" ]; then  # Fedora
-        upd=$(dnf check-update -q | wc -l)
-        printf "[ UPDATES ]\n:: You have \e[1;32m$upd\e[0m updates available\n"
-
-    elif [ -n "$(command -v zypper)" ]; then  # openSUSE
-        upd=$(zypper lu --best-effort | grep -c 'v  |')
-        printf "[ UPDATES ]\n:: You have \e[1;32m$upd\e[0m updates available\n"
-
-    elif [ -n "$(command -v apt)" ]; then   # debian/ubuntu
-        upd=$(apt list --upgradable 2> /dev/null | grep -c '\[upgradable from')
-        printf "[ UPDATES ]\n:: You have \e[1;32m$upd\e[0m updates available\n"
-
+    _detect_pkg_manager
+    if [[ "$PKG_MANAGER" == "pacman" ]]; then
+        local aur=0
+        if [[ -n "$AUR_HELPER" ]]; then
+            aur=$("$AUR_HELPER" -Qua 2>/dev/null | wc -l)
+        fi
+        local ofc=$(checkupdates 2>/dev/null | wc -l)
+        local upd=$(( ofc + aur ))
+        printf "[ UPDATES ]\n:: You have \e[1;32m%d\e[0m updates available.\n:: Main: %d\n:: AUR: %d\n" "$upd" "$ofc" "$aur"
+    elif [[ "$PKG_MANAGER" == "dnf" ]]; then
+        local upd=$(dnf check-update -q 2>/dev/null | grep -v "^$" | wc -l)
+        printf "[ UPDATES ]\n:: You have \e[1;32m%d\e[0m updates available\n" "$upd"
+    elif [[ "$PKG_MANAGER" == "zypper" ]]; then
+        local upd=$(zypper lu --best-effort 2>/dev/null | grep -c 'v  |')
+        printf "[ UPDATES ]\n:: You have \e[1;32m%d\e[0m updates available\n" "$upd"
+    elif [[ "$PKG_MANAGER" == "apt" ]]; then
+        local upd=$(apt list --upgradable 2> /dev/null | grep -c '\[upgradable from')
+        printf "[ UPDATES ]\n:: You have \e[1;32m%d\e[0m updates available\n" "$upd"
     else
         printf "\e[1;31m Unsupported package manager for now, please let us know in the github repository...\e[1;0m \n https://github.com/me-js-bro/Bash\n"
         return 1
@@ -137,18 +152,18 @@ fn_check_updates() {
 
 # package updates
 fn_update() {
-    update_success=0
-    network_error=0
-
-    if [ -n "$(command -v pacman)" ]; then  # Arch Linux
-        aur=$(command -v yay || command -v paru) # find the aur helper
-        $aur -Syyu --noconfirm
-
-    elif [ -n "$(command -v dnf)" ]; then  # Fedora
+    _detect_pkg_manager
+    if [[ "$PKG_MANAGER" == "pacman" ]]; then
+        if [[ -n "$AUR_HELPER" ]]; then
+            "$AUR_HELPER" -Syyu --noconfirm
+        else
+            sudo pacman -Syyu --noconfirm
+        fi
+    elif [[ "$PKG_MANAGER" == "dnf" ]]; then
         sudo dnf update -y && sudo dnf upgrade -y --refresh
-    elif [ -n "$(command -v zypper)" ]; then  # openSUSE
+    elif [[ "$PKG_MANAGER" == "zypper" ]]; then
         sudo zypper ref && sudo zypper up -y
-    elif [ -n "$(command -v apt)" ]; then  # Debian/Ubuntu
+    elif [[ "$PKG_MANAGER" == "apt" ]]; then
         sudo apt update -y && sudo apt upgrade -y
     else
         printf "\e[1;31m Unsupported package manager for now, please let us know in the github repository...\e[1;0m \n https://github.com/me-js-bro/Bash\n"
@@ -158,26 +173,19 @@ fn_update() {
 
 # Install software
 fn_install() {
-
-    if [ -n "$(command -v pacman)" ]; then  # Arch Linux
-
-        pkg_manager=$(command -v pacman || command -v yay || command -v paru)
-        aur=$(command -v yay || command -v paru) # find the aur helper
-
-        $aur -S --noconfirm "$@"
-
-    elif [ -n "$(command -v dnf)" ]; then  # Fedora
-
+    _detect_pkg_manager
+    if [[ "$PKG_MANAGER" == "pacman" ]]; then
+        if [[ -n "$AUR_HELPER" ]]; then
+            "$AUR_HELPER" -S --noconfirm "$@"
+        else
+            sudo pacman -S --noconfirm "$@"
+        fi
+    elif [[ "$PKG_MANAGER" == "dnf" ]]; then
         sudo dnf install -y "$@"
-
-    elif [ -n "$(command -v zypper)" ]; then  # openSUSE
-
+    elif [[ "$PKG_MANAGER" == "zypper" ]]; then
         sudo zypper in -y "$@"
-
-    elif [ -n "$(command -v apt)" ]; then  # Ubuntu or Ubuntu-based
-
+    elif [[ "$PKG_MANAGER" == "apt" ]]; then
         sudo apt install -y "$@"
-
     else
         printf "\e[1;31m Unsupported package manager for now, please let us know in the GitHub repository...\e[1;0m \n https://github.com/me-js-bro/Bash\n"
         return 1
@@ -186,24 +194,19 @@ fn_install() {
 
 # package install
 fn_uninstall() {
-    if [ -n "$(command -v pacman)" ]; then  # Arch Linux
-    
-        pkg_manager=$(command -v pacman || command -v yay || command -v paru)
-        aur=$(command -v yay || command -v paru)
-        "$aur" -Rns "$@"
-
-    elif [ -n "$(command -v dnf)" ]; then  # Fedora
-
+    _detect_pkg_manager
+    if [[ "$PKG_MANAGER" == "pacman" ]]; then
+        if [[ -n "$AUR_HELPER" ]]; then
+            "$AUR_HELPER" -Rns "$@"
+        else
+            sudo pacman -Rns "$@"
+        fi
+    elif [[ "$PKG_MANAGER" == "dnf" ]]; then
         sudo dnf remove "$@"
-
-    elif [ -n "$(command -v zypper)" ]; then  # openSUSE
-
+    elif [[ "$PKG_MANAGER" == "zypper" ]]; then
         sudo zypper rm "$@"
-
-    elif [ -n "$(command -v apt)" ]; then  # ubunt or related
-
+    elif [[ "$PKG_MANAGER" == "apt" ]]; then
         sudo apt remove "$@"
-
     else
         printf "\e[1;31m Unsupported package manager for now, please let us know in the github repository...\e[1;0m \n https://github.com/me-js-bro/Bash\n"
         return 1
@@ -230,121 +233,97 @@ fn_compile_cpp() {
 
 # git info
 git_info() {
-  # Check if current directory is a Git repository
-  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # Check if current directory is a Git repository
+    local branch_name
+    branch_name=$(git branch --show-current 2>/dev/null) || return 0
 
-    # Get the current branch name
-    branch_name=$(git branch --show-current 2>/dev/null)
-
-    # Count untracked files
-    untracked_count=$(git status --porcelain | grep '^??' | wc -l)
-
-    # Count unstaged changes (modified but not staged)
-    unstaged_count=$(git diff --name-only | wc -l)
-
-    # Count staged changes (staged but not committed)
-    staged_count=$(git diff --cached --name-only | wc -l)
-
-    # Print information
     if [[ -n "$branch_name" ]]; then
-      printf "on \e[1;34m\e[1;32m $branch_name\e[1;0m\u001b[35;1m \e[1;0m"  # Git branch with icon
+        local untracked_count=0 unstaged_count=0 staged_count=0
 
-      if [[ "$untracked_count" -gt 0 ]]; then
-        printf "\e[1;31m?$untracked_count \e[3;0m\n"  # Show untracked files in orange
-      fi
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local x="${line:0:1}" y="${line:1:1}"
+            if [[ "$x" == "?" && "$y" == "?" ]]; then
+                ((untracked_count++))
+            else
+                [[ "$x" != " " && "$x" != "?" ]] && ((staged_count++))
+                [[ "$y" != " " && "$y" != "?" ]] && ((unstaged_count++))
+            fi
+        done < <(git status --porcelain 2>/dev/null)
 
-      if [[ "$staged_count" -gt 0 ]]; then
-        printf "\e[1;32m$staged_count \e[3;0m\n"  # Show staged files in green
-      fi
-      
-      if [[ "$unstaged_count" -gt 0 ]]; then
-        printf "\e[1;33m!$unstaged_count \e[3;0m\n"  # Show unstaged files in yellow
+        printf "on \e[1;34m\e[1;32m %s\e[1;0m " "$branch_name"
 
-      fi
+        [[ "$untracked_count" -gt 0 ]] && printf "\e[1;31m?%d \e[3;0m" "$untracked_count"
+        [[ "$staged_count" -gt 0 ]] && printf "\e[1;32m%d \e[3;0m" "$staged_count"
+        [[ "$unstaged_count" -gt 0 ]] && printf "\e[1;33m!%d \e[3;0m" "$unstaged_count"
 
-      if [[ "$untracked_count" -eq 0 && "$staged_count" -eq 0 && "$unstaged_count" -eq 0 ]]; then
-        printf "\e[1;32m✓ \e[3;0m\n"  # Show clean repository status
-      fi
+        if [[ "$untracked_count" -eq 0 && "$staged_count" -eq 0 && "$unstaged_count" -eq 0 ]]; then
+            printf "\e[1;32m✓ \e[3;0m"
+        fi
+        printf "\n"
     fi
-  fi
 }
 
 # fn to push git commits easily
 push() {
-
-    # Push function
-    __push() {
-        local current="$1"
-        local commit="$2"
-        if [[ "$current" == "main" ]]; then
-            git add .
-            git commit -m "$commit"
-            git push
-        else
-            git add .
-            git commit -m "$commit"
-            git push origin "$current"
-        fi
+    # Check if current directory is a Git repository
+    local branch_name
+    branch_name=$(git branch --show-current 2>/dev/null) || {
+        printf "!! Not inside a Git repository.\n"
+        return 1
     }
 
-    # Check if current directory is a Git repository
-    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        # Get the current branch name
-        branch_name=$(git branch --show-current 2>/dev/null)
-
-        # Count untracked files
-        untracked_count=$(git status --porcelain | grep '^??' | wc -l)
-
-        # Count unstaged changes (modified but not staged)
-        unstaged_count=$(git diff --name-only | wc -l)
-
-        # Count staged changes (staged but not committed)
-        staged_count=$(git diff --cached --name-only | wc -l)
-
-        # Display information
-        if [[ -n "$branch_name" ]]; then
-            if [[ "$untracked_count" -gt 0 ]]; then
-                printf "=> %s untracked files\n" "$untracked_count"
-            fi
-
-            if [[ "$unstaged_count" -gt 0 ]]; then
-                printf "=> %s uncommitted changes\n" "$unstaged_count"
-            fi
-
-            if [[ "$staged_count" -gt 0 ]]; then
-                printf "=> %s staged changes\n" "$staged_count"
-            fi
-
-            if [[ "$untracked_count" -eq 0 && "$unstaged_count" -eq 0 && "$staged_count" -eq 0 ]]; then
-                printf "✓ Nothing to push.\n"
-            else
-                printf "=> %s branch\n" "$branch_name"
-                printf "\nWrite the commit message\n"
-
-                if [[ -n "$(command -v gum)" ]]; then
-                    msg="$(gum input --placeholder "Write your commit message")"
-                else
-                    read -p "=> " msg
-                fi
-                sleep 0.5
-
-                __push "$branch_name" "$msg" &> /dev/null
-
-                sleep 1
-
-                # Check the result of the last command
-                if [[ "$untracked_count" -eq 0 || "$unstaged_count" -eq 0 || "$staged_count" -eq 0 ]]; then
-
-                    dir="$(dirname "${BASH_SOURCE[0]}")"
-                    paplay "$dir/fah.mp3"
-                    printf ":: Pushed successfully!\n"
-                else
-                    printf "!! Sorry, push failed. Please check for errors.\n"
-                fi
-            fi
+    local untracked_count=0 unstaged_count=0 staged_count=0
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        local x="${line:0:1}" y="${line:1:1}"
+        if [[ "$x" == "?" && "$y" == "?" ]]; then ((untracked_count++))
+        else
+            [[ "$x" != " " && "$x" != "?" ]] && ((staged_count++))
+            [[ "$y" != " " && "$y" != "?" ]] && ((unstaged_count++))
         fi
+    done < <(git status --porcelain 2>/dev/null)
+
+    if [[ "$untracked_count" -gt 0 ]]; then printf "=> %s untracked files\n" "$untracked_count"; fi
+    if [[ "$unstaged_count" -gt 0 ]]; then printf "=> %s uncommitted changes\n" "$unstaged_count"; fi
+    if [[ "$staged_count" -gt 0 ]]; then printf "=> %s staged changes\n" "$staged_count"; fi
+
+    if [[ "$untracked_count" -eq 0 && "$unstaged_count" -eq 0 && "$staged_count" -eq 0 ]]; then
+        printf "✓ Nothing to push.\n"
+        return 0
+    fi
+
+    printf "=> %s branch\n\nWrite the commit message\n" "$branch_name"
+
+    local msg
+    if command -v gum &>/dev/null; then
+        msg="$(gum input --placeholder "Write your commit message")"
     else
-        printf "!! Not inside a Git repository.\n"
+        read -r -p "=> " msg
+    fi
+
+    [[ -z "$msg" ]] && { printf "!! Aborting due to empty commit message.\n"; return 1; }
+
+    git add .
+    if ! git commit -m "$msg"; then
+        printf "!! Commit failed.\n"
+        return 1
+    fi
+
+    if [[ "$branch_name" == "main" || "$branch_name" == "master" ]]; then
+        git push
+    else
+        git push origin "$branch_name"
+    fi
+
+    local status=$?
+    if [[ $status -eq 0 ]]; then
+        local dir
+        dir="$(dirname "${BASH_SOURCE[0]}")"
+        [[ -f "$dir/fah.mp3" ]] && paplay "$dir/fah.mp3" &>/dev/null &
+        printf ":: Pushed successfully!\n"
+    else
+        printf "!! Sorry, push failed. Please check for errors.\n"
     fi
 }
 
@@ -402,7 +381,7 @@ precmd() {
 
 # Function to capture the current time
 current_time() {
-    echo -e "\e[90m $(date +%I:%M\ %p)\e[0m"
+    echo -ne "\e[90m $(date +'%I:%M %p')\e[0m"
 }
 
 ffstyle() {
@@ -430,7 +409,7 @@ ffstyle() {
         ((i++))
     done
 
-    read -p "Select: " stl
+    read -r -p "Select: " stl
 
     if [[ "$stl" -gt 0 && "$stl" -le "${#presets[@]}" ]]; then
         __selected="${presets[$((stl - 1))]}"
@@ -473,7 +452,7 @@ ffimg() {
         ((i++))
     done
 
-    read -p "Select (1-${#presets[@]}): " stl
+    read -r -p "Select (1-${#presets[@]}): " stl
 
     if ! [[ "$stl" =~ ^[0-9]+$ ]]; then
         echo "Invalid input. Please enter a number."
@@ -497,31 +476,23 @@ ffimg() {
 }
 
 ss() {
-    aur=$(command -v yay || command -v paru)
-    yay=$(command -v yay)
-    paru=$(command -v paru)
-
-    if [[ "$aur" == "$yay" ]]; then 
-        yay -Slq | fzf --multi --preview 'yay -Sii {1}' --preview-window=down:75% | xargs -ro yay -S --noconfirm
-    elif [[ "$aur" == "$paru" ]]; then 
-        paru -Slq | fzf --multi --preview 'paru -Sii {1}' --preview-window=down:75% | xargs -ro paru -S --noconfirm
+    local aur
+    aur=$(command -v yay 2>/dev/null || command -v paru 2>/dev/null)
+    if [[ -n "$aur" ]]; then 
+        "$aur" -Slq | fzf --multi --preview "$aur -Sii {1}" --preview-window=down:75% | xargs -ro "$aur" -S --noconfirm
     else
-        pkg="$(command -v apt || command -v dnf || command -v zypper)"
-
-        search() {
-            local package="$1"
-            if [[ -z "$package" ]]; then
-                echo -e "Please add your package name."
-                echo -e "Usage: ss <package_name>"
-
-                return
-            else
-                $pkg search $package
-            fi
-        }
-
-        search $1
-
+        local pkg
+        pkg=$(command -v apt 2>/dev/null || command -v dnf 2>/dev/null || command -v zypper 2>/dev/null)
+        if [[ -z "$1" ]]; then
+            printf "Please add your package name.\nUsage: ss <package_name>\n"
+            return 1
+        fi
+        if [[ -n "$pkg" ]]; then
+            "$pkg" search "$1"
+        else
+            printf "!! Unsupported package manager.\n"
+            return 1
+        fi
     fi
 }
 

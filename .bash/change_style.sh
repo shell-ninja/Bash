@@ -46,7 +46,7 @@ print_box_footer
 
 echo
 echo -en "\e[1;35m❯\e[0m \e[1;37mChoose a number (1-${#styles[@]}):\e[0m "
-read stl
+read -r stl
 
 if [[ "$stl" =~ ^[0-9]+$ ]] && (( stl > 0 && stl <= ${#styles[@]} )); then
     selected="${styles[$((stl - 1))]}"
