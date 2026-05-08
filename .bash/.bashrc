@@ -183,3 +183,4 @@ bind "set vi-ins-mode-string "
 
 # ================================= ble-attach ================================= #
 [[ ${BLE_VERSION-} ]] && ble-attach
+source "$HOME/.cargo/env"
