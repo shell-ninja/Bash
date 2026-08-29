@@ -56,10 +56,10 @@ if [[ "$stl" =~ ^[0-9]+$ ]] && (( stl > 0 && stl <= ${#styles[@]} )); then
     echo -e "  \e[1;34m[*]\e[0m Setting prompt to: \e[1;32m$selected\e[0m"
 
     # Safely replace the exact line exporting STARSHIP_CONFIG
-    sed -i "s|^export STARSHIP_CONFIG=.*|export STARSHIP_CONFIG=$prompt_file|g" "$bash_config"
+    sed -i --follow-symlinks "s|^export STARSHIP_CONFIG=.*|export STARSHIP_CONFIG=$prompt_file|g" "$bash_config"
 
     # Re-enable Starship in case it was disabled by change_prompt.sh
-    sed -i 's/^# *source "$STARSHIP_CACHE"/source "$STARSHIP_CACHE"/g' "$bash_config"
+    sed -i --follow-symlinks 's/^# *source "$STARSHIP_CACHE"/source "$STARSHIP_CACHE"/g' "$bash_config"
 
     echo -e "  \e[1;34m[*]\e[0m Applying changes immediately..."
     sleep 1 && clear

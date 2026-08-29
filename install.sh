@@ -226,8 +226,8 @@ if [ -d ~/.bash ]; then
 
         if [[ -f ~/.bash/.bashrc ]]; then
             # Comment out standard PS1 and uncomment starship init
-            sed -i 's/^PS1=/# PS1=/' ~/.bash/.bashrc
-            sed -i 's/^# eval "\(.*starship init bash.*\)"/eval "\1"/' ~/.bash/.bashrc
+            sed -i --follow-symlinks 's/^PS1=/# PS1=/' ~/.bash/.bashrc
+            sed -i --follow-symlinks 's/^# eval "\(.*starship init bash.*\)"/eval "\1"/' ~/.bash/.bashrc
             msg dn "Updated .bashrc file. Commented out PS1 and enabled Starship prompt."
         fi
     fi

@@ -18,90 +18,191 @@
 # --- copy-paste with automatic sudo elevation ---
 fn_copy_paste() {
     local destination="${!#}"
+    # Remove a trailing slash to normalise the path (we will later add it back for directory mode)
+    destination="${destination%/}"
     local items=("${@:1:$(($#-1))}")
 
-    # ---- decide if sudo is needed ----
+    # ---- Determine mode: directory vs. single file copy ----
+    local mode="dir"
+    if [[ ${#items[@]} -eq 1 && ! -d "$destination" ]]; then
+        # Only one source and the destination does NOT exist as a directory -> rename
+        mode="file"
+    fi
+    # If destination ended with a trailing slash in the original call, force directory mode
+    if [[ "${!#}" == */ ]]; then
+        mode="dir"
+    fi
+
+    # ---- Decide whether sudo is required (only when necessary) ----
     local SUDO=""
-    if [[ $EUID -eq 0 ]]; then
-        SUDO=""
-    elif [[ ! -r "${items[0]}" ]] || [[ ! -w "$destination" || ! -x "$destination" ]]; then
-        SUDO="sudo"
-    fi
-
-    # ---- refresh sudo credentials early ----
-    if [[ -n $SUDO ]]; then
-        sudo -v 2>/dev/null || true   # keep the timestamp alive; ignore if it fails (e.g., no password set)
-    fi
-
-    # create destination (with sudo if necessary)
-    if ! mkdir -p "$destination" 2>/dev/null; then
-        if [[ -n $SUDO ]]; then
-            $SUDO mkdir -p "$destination" || {
-                printf "!! Failed to create destination: %s\n" "$destination"
-                return 1
-            }
+    if [[ $EUID -ne 0 ]]; then
+        # Check destination / parent writability
+        if [[ "$mode" == "dir" ]]; then
+            if [[ -d "$destination" ]]; then
+                # Existing directory: must be writable and traversable
+                [[ -w "$destination" && -x "$destination" ]] || SUDO="sudo"
+            else
+                # Directory does not exist – check parent directory
+                local parent; parent=$(dirname "$destination")
+                [[ -w "$parent" && -x "$parent" ]] || SUDO="sudo"
+            fi
         else
-            printf "!! Failed to create destination: %s\n" "$destination"
-            return 1
+            # File mode: check the directory that will contain the destination file
+            local dest_dir; dest_dir=$(dirname "$destination")
+            if [[ -e "$destination" ]]; then
+                # Existing file: need write permission on it (can be overwritten)
+                [[ -w "$destination" ]] || SUDO="sudo"
+            else
+                # File doesn't exist: need write+execute on parent
+                [[ -w "$dest_dir" && -x "$dest_dir" ]] || SUDO="sudo"
+            fi
+        fi
+
+        # Also check readability of every source item
+        for item in "${items[@]}"; do
+            if [[ ! -r "$item" ]]; then
+                SUDO="sudo"
+                break
+            fi
+        done
+    fi
+
+    # ---- Refresh sudo credentials early if needed ----
+    if [[ -n $SUDO ]]; then
+        sudo -v 2>/dev/null || true
+    fi
+
+    # ---- Create destination if it does not exist (directory mode only) ----
+    if [[ "$mode" == "dir" ]]; then
+        if [[ ! -d "$destination" ]]; then
+            if ! mkdir -p "$destination" 2>/dev/null; then
+                if [[ -n $SUDO ]]; then
+                    $SUDO mkdir -p "$destination" || {
+                        printf "!! Failed to create destination directory: %s\n" "$destination"
+                        return 1
+                    }
+                else
+                    printf "!! Failed to create destination directory: %s\n" "$destination"
+                    return 1
+                fi
+            fi
+        fi
+    else
+        # File mode: ensure the parent directory exists
+        local dest_dir; dest_dir=$(dirname "$destination")
+        if [[ ! -d "$dest_dir" ]]; then
+            if ! mkdir -p "$dest_dir" 2>/dev/null; then
+                if [[ -n $SUDO ]]; then
+                    $SUDO mkdir -p "$dest_dir" || {
+                        printf "!! Failed to create parent directory: %s\n" "$dest_dir"
+                        return 1
+                    }
+                else
+                    printf "!! Failed to create parent directory: %s\n" "$dest_dir"
+                    return 1
+                fi
+            fi
         fi
     fi
 
+    # ---- Copy each item ----
     for item in "${items[@]}"; do
         item="${item%/}"
         local name="${item##*/}"
 
         if [[ -f "$item" ]]; then
-            printf "\n:: Copying file %s → %s\n" "$name" "$destination"
-
-            if [[ "$name" == *.iso ]]; then
-                # ISO copy with pv + dd, then sync
-                pv "$item" | $SUDO dd of="$destination/$name" bs=4M status=none
-                if [[ $? -eq 0 ]]; then
-                    printf "\n:: Syncing to disk (this may take a while)...\n"
-                    $SUDO sync &
-                    local sync_pid=$!
-                    local spinstr='|/-\'
-                    while kill -0 $sync_pid 2>/dev/null; do
-                        for ((i=0; i<${#spinstr}; i++)); do
-                            printf "\r[%c] Syncing... " "${spinstr:$i:1}"
-                            sleep 0.1
-                        done
-                    done
-                    wait $sync_pid
-                    printf "\r\e[KSync complete.\n"
+            # ---- File ----
+            if [[ "$mode" == "file" ]]; then
+                # Single file rename: copy directly to destination path
+                printf "\n:: Copying file %s → %s\n" "$name" "$destination"
+                if [[ "$name" == *.iso ]]; then
+                    pv "$item" | $SUDO dd of="$destination" bs=4M status=none
                 else
-                    printf "!! ISO copy failed.\n"
+                    if [[ -n $SUDO ]]; then
+                        pv "$item" | sudo tee "$destination" > /dev/null
+                    else
+                        pv "$item" > "$destination"
+                    fi
                 fi
             else
-                # Normal file
-                if [[ -n $SUDO ]]; then
-                    pv "$item" | sudo tee "$destination/$name" > /dev/null
+                # Directory mode: copy file into the destination directory
+                printf "\n:: Copying file %s → %s\n" "$name" "$destination"
+                if [[ "$name" == *.iso ]]; then
+                    pv "$item" | $SUDO dd of="$destination/$name" bs=4M status=none
                 else
-                    pv "$item" > "$destination/$name"
+                    if [[ -n $SUDO ]]; then
+                        pv "$item" | sudo tee "$destination/$name" > /dev/null
+                    else
+                        pv "$item" > "$destination/$name"
+                    fi
                 fi
+            fi
+
+            # Sync after ISO copy (only if dd succeeded)
+            if [[ "$name" == *.iso && $? -eq 0 ]]; then
+                printf "\n:: Syncing to disk (this may take a while)...\n"
+                $SUDO sync &
+                local sync_pid=$!
+                local spinstr='|/-\'
+                while kill -0 $sync_pid 2>/dev/null; do
+                    for ((i=0; i<${#spinstr}; i++)); do
+                        printf "\r[%c] Syncing... " "${spinstr:$i:1}"
+                        sleep 0.1
+                    done
+                done
+                wait $sync_pid
+                printf "\r\e[KSync complete.\n"
             fi
 
         elif [[ -d "$item" ]]; then
-            printf "\n:: Copying directory %s → %s\n" "$name" "$destination"
+            # ---- Directory ----
+            if [[ "$mode" == "file" ]]; then
+                # Rename a single directory: copy contents into the new directory
+                printf "\n:: Copying directory %s → %s (renamed)\n" "$name" "$destination"
+                # Ensure the new directory exists (already created above, but double-check)
+                if ! mkdir -p "$destination" 2>/dev/null; then
+                    if [[ -n $SUDO ]]; then
+                        $SUDO mkdir -p "$destination" || {
+                            printf "!! Failed to create destination directory: %s\n" "$destination"
+                            return 1
+                        }
+                    else
+                        printf "!! Failed to create destination directory: %s\n" "$destination"
+                        return 1
+                    fi
+                fi
 
-            local parent
-            parent="$(dirname "$item")"
-
-            if [[ -n $SUDO ]]; then
-                sudo tar -C "$parent" -cf - "$name" |
-                    pv -N "$name" |
-                    sudo tar -xf - -C "$destination"
+                # Copy the *contents* of the source into the new directory
+                if [[ -n $SUDO ]]; then
+                    $SUDO tar -C "$item" -cf - . |
+                        pv -N "$name" |
+                        $SUDO tar -xf - -C "$destination"
+                else
+                    tar -C "$item" -cf - . |
+                        pv -N "$name" |
+                        tar -xf - -C "$destination"
+                fi
             else
-                tar -C "$parent" -cf - "$name" |
-                    pv -N "$name" |
-                    tar -xf - -C "$destination"
-            fi
+                # Normal mode: copy the directory into an existing destination
+                printf "\n:: Copying directory %s → %s\n" "$name" "$destination"
+                local parent; parent="$(dirname "$item")"
 
+                if [[ -n $SUDO ]]; then
+                    sudo tar -C "$parent" -cf - "$name" |
+                        pv -N "$name" |
+                        sudo tar -xf - -C "$destination"
+                else
+                    tar -C "$parent" -cf - "$name" |
+                        pv -N "$name" |
+                        tar -xf - -C "$destination"
+                fi
+            fi
         else
             printf "!! Skipping unknown type: %s\n" "$item"
         fi
     done
 }
+
 # remove files and directories (safer, verbose, smart sudo)
 fn_removal() {
     if [[ $# -eq 0 ]]; then
@@ -448,6 +549,15 @@ current_time() {
 }
 # ----------------------------------------------------------------
 
+# Fastfetch wrapper that uses ffconfig when invoked with no arguments
+fastfetch() {
+    if [[ $# -eq 0 && -n "${ffconfig:-}" && -d "$HOME/.local/share/fastfetch" ]]; then
+        command fastfetch --config "$ffconfig"
+    else
+        command fastfetch "$@"
+    fi
+}
+
 # Interactive fastfetch style switcher
 ffstyle() {
     local preferredDir="$HOME/.local/share/fastfetch/presets"
@@ -455,43 +565,41 @@ ffstyle() {
         printf "Preset directory not found: %s\n" "$preferredDir"
         return 1
     fi
-
     local -a presets
     for preset in "$preferredDir"/*.jsonc; do
         [[ -f "$preset" ]] || continue
         presets+=("${preset##*/}")
     done
     presets=("${presets[@]%.jsonc}")
-
     if [[ ${#presets[@]} -eq 0 ]]; then
         printf "No presets found in %s\n" "$preferredDir"
         return 1
     fi
-
-    printf "-> Choose Fastfetch style you want\n"
+    printf -- "-> Choose Fastfetch style you want\n"
     local i=1
     for prst in "${presets[@]}"; do
         printf "%d. %s\n" "$i" "$prst"
         ((i++))
     done
-
     local stl
     read -r -p "Select: " stl
     if [[ ! "$stl" =~ ^[0-9]+$ ]] || (( stl < 1 || stl > ${#presets[@]} )); then
         printf "Invalid selection.\n"
         return 1
     fi
-
     local selected="${presets[$((stl - 1))]}"
     printf "Setting %s as fastfetch style...\n" "$selected"
+    # Update config in .bashrc (prefer ~/.bash/.bashrc, fallback to ~/.bashrc)
+    local bash_config="$HOME/.bash/.bashrc"
+    [[ ! -f "$bash_config" ]] && bash_config="$HOME/.bashrc"
 
-    # Update config in .bashrc (only if the variable exists there)
-    if grep -q '^ffconfig=' "$HOME/.bashrc"; then
-        sed -i "s|^ffconfig=.*$|ffconfig=$selected|" "$HOME/.bashrc"
+    if grep -q '^export ffconfig=' "$bash_config"; then
+        sed -i --follow-symlinks "s|^export ffconfig=.*\$|export ffconfig=$selected|" "$bash_config"
     else
-        printf "ffconfig variable not found in .bashrc; please set it manually.\n"
+        printf 'export ffconfig=%s\n' "$selected" >> "$bash_config"
     fi
     export ffconfig="$selected"
+    command fastfetch --config "$ffconfig"
 }
 
 # Interactive fastfetch image switcher
@@ -504,7 +612,9 @@ ffimg() {
 
     # Ensure ffconfig is loaded (used to check if minimal style is active)
     if [[ -z "${ffconfig:-}" ]]; then
-        source "$HOME/.bashrc" 2>/dev/null || true
+        local bash_config="$HOME/.bash/.bashrc"
+        [[ ! -f "$bash_config" ]] && bash_config="$HOME/.bashrc"
+        source "$bash_config" 2>/dev/null || true
     fi
     if [[ "${ffconfig:-}" != "minimal" ]]; then
         printf "minimal style is not selected.\n"

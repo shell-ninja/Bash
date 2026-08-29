@@ -13,8 +13,7 @@ iatest=$(expr index "$-" i)
 # ██╔██╗ ██║██║██╔██╗ ██║     ██║███████║ 
 # ██║╚██╗██║██║██║╚██╗██║██   ██║██╔══██║ 
 # ██║ ╚████║██║██║ ╚████║╚█████╔╝██║  ██║ 
-# ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝ 
-                                                                            
+# ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚════╝ ╚═╝  ╚═╝                                                       
 #==============================================================================
 
 
@@ -26,10 +25,9 @@ source ~/.local/share/blesh/ble.sh --attach=none
 if command -v fastfetch &> /dev/null; then
     if [[ -d "$HOME/.local/share/fastfetch" ]]; then
         export ffconfig=minimal
-        fastfetch --config "$ffconfig"
-        alias fastfetch='clr && fastfetch --config "$ffconfig"'
+        command fastfetch --config "$ffconfig"
     else
-        fastfetch
+        command fastfetch
     fi
 fi
 
@@ -184,4 +182,3 @@ bind "set vi-ins-mode-string "
 # ================================= ble-attach ================================= #
 [[ ${BLE_VERSION-} ]] && ble-attach
 # source "$HOME/.cargo/env"
-

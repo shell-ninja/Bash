@@ -48,9 +48,8 @@ alias q='exit'
 alias nrd='npm run dev'
 
 ## file operations ##
-alias rmv='fn_removal' # remove file & directory safely
-alias srm='sudo rm -rf'
-alias cpp='fn_copy_paste'
+alias rm='fn_removal' # remove file & directory safely
+alias cp='fn_copy_paste'
 
 ## system info ##
 alias du='du -sh'
@@ -64,7 +63,6 @@ alias find='nvim $(fzf --preview="bat --color=always {}")'
 alias nvm='nvim .'
 alias open='nvim .'
 alias snv='sudo -E nvim -d'
-alias ag='antigravity .'
 
 ## package management ##
 alias cu='fn_check_updates'
