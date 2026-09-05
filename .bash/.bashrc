@@ -24,8 +24,9 @@ source ~/.local/share/blesh/ble.sh --attach=none
 # ================================= fastfetch ================================= #
 if command -v fastfetch &> /dev/null; then
     if [[ -d "$HOME/.local/share/fastfetch" ]]; then
-        export ffconfig=minimal
-        command fastfetch --config "$ffconfig"
+        export ffconfig="minimal"
+        command fastfetch --config \
+            "$HOME/.local/share/fastfetch/presets/${ffconfig}.jsonc"
     else
         command fastfetch
     fi
@@ -40,7 +41,7 @@ fi
 PS1='\n\e[1;36m╭─ \e[1;37m\u\e[1;34m@\e[1;37m\h\e[1;0m in $(if [[ "$PWD" = "$HOME" ]]; then echo "\e[1;36m󰜥"; elif [[ "$PWD" = "/" ]]; then echo "\e[1;36m\e[1;0m"; else echo "\e[1;33m\w"; fi)\n\e[1;36m╰──\e[1;32m󰘧\e[1;0m '
 
 # set prompt starship
-# export STARSHIP_CONFIG=/home/shell-ninja/.bash/starship/starship-macos_frame.toml
+# export STARSHIP_CONFIG="$HOME/.bash/starship/starship-macos_frame.toml"
 
 # Cache starship init to speed up terminal start
 STARSHIP_CACHE="$HOME/.cache/starship_init.bash"
@@ -182,3 +183,5 @@ bind "set vi-ins-mode-string "
 # ================================= ble-attach ================================= #
 [[ ${BLE_VERSION-} ]] && ble-attach
 # source "$HOME/.cargo/env"
+export ffconfig="minimal"
+export LIBVIRT_DEFAULT_URI="qemu:///system"
